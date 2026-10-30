@@ -12,21 +12,31 @@
 
 <style>
 
-body{margin:0;background:#080d18;color:white;font-family:Arial,sans-serif;padding:20px}
+*{box-sizing:border-box}
 
-h1{color:#ffd43b;text-align:center;font-size:28px}
+body{margin:0;padding:22px;background:#080d18;color:white;font-family:Arial,sans-serif}
 
-.sub{text-align:center;color:#9eacc2}
+h1{text-align:center;color:#ffd84d;font-size:29px}
 
-.panel{background:#142137;border:1px solid #30415b;border-radius:14px;padding:16px;margin:15px 0}
+.sub{text-align:center;color:#aab6cc;font-size:17px}
 
-button{background:#ffd43b;color:#111;border:0;border-radius:9px;padding:12px;font-weight:bold;width:100%;font-size:15px}
+.panel{background:#172238;border:1px solid #34445f;border-radius:18px;padding:20px;margin:18px 0}
 
-select{background:#263750;color:white;padding:10px;border-radius:8px;width:100%;margin:8px 0}
+label{display:block;margin:12px 0}
 
-.status{color:#70e0a0;text-align:center}
+select,button{width:100%;padding:16px;border-radius:12px;font-size:17px}
 
-.note{font-size:12px;color:#aab7ca;line-height:1.5}
+select{background:#293953;color:white;border:1px solid #ddd}
+
+button{background:#ffd84d;color:#111;border:0;font-weight:bold;margin-top:12px}
+
+.server{background:#24334d;padding:14px;border-radius:12px;margin:12px 0}
+
+.small{color:#aab6cc;font-size:13px}
+
+.status{text-align:center;color:#8be0a5;padding:10px}
+
+a{color:#ffd84d}
 
 </style>
 
@@ -36,99 +46,91 @@ select{background:#263750;color:white;padding:10px;border-radius:8px;width:100%;
 
 <h1>🥚 MI RADAR EGGS</h1>
 
-<p class="sub">Tu buscador de huevos raros de Roblox</p>
+<p class="sub">Tu buscador de servidores de Roblox</p>
 
 <div class="panel">
 
-<h3>🎯 Filtros</h3>
+<h2>🎯 Filtros</h2>
+
+<label>Rareza que buscas</label>
 
 <select id="rarity">
 
-<option>Todos los huevos</option>
+<option value="all">Todos los huevos</option>
 
-<option>Secret</option>
+<option value="Secret">Secret</option>
 
-<option>Divine</option>
+<option value="Divine">Divine</option>
 
-<option>Eternal</option>
+<option value="Eternal">Eternal</option>
 
 </select>
 
-<button onclick="loadServers()">BUSCAR SERVIDORES</button>
+<button onclick="buscar()">BUSCAR SERVIDORES</button>
+
+<p class="small">La rareza se podrá filtrar cuando tengamos una fuente que informe qué huevo hay en cada servidor.</p>
 
 </div>
 
 <div class="panel">
 
-<p class="status" id="status">Radar preparado</p>
+<div id="status" class="status">Listo para buscar</div>
 
-<div id="results" class="note">
-
-Pulsa buscar para consultar los servidores públicos.
+<div id="results"></div>
 
 </div>
 
-</div>
-
-<p class="note">
-
-Esta es la primera versión. Puede mostrar servidores públicos, pero todavía no detecta qué huevo hay dentro de cada servidor. No introduzcas tu contraseña de Roblox aquí.
-
-</p>
+<p class="small">Esta versión consulta servidores públicos. No solicita tu contraseña ni tus datos de Roblox.</p>
 
 <script>
 
-const PLACE_ID="107778070777162";
+const API="https://mi-radar-eggs-api.ij5084120.workers.dev";
 
-async function loadServers(){
+async function buscar(){
 
  const status=document.getElementById("status");
 
  const results=document.getElementById("results");
 
- status.textContent="Buscando servidores...";
+ status.textContent="Buscando servidores públicos...";
 
- results.textContent="Conectando con Roblox...";
+ results.innerHTML="";
 
  try{
 
-  const response=await fetch(
+  const response=await fetch(API+"/servers");
 
-   `https://games.roblox.com/v1/games/${PLACE_ID}/servers/Public?sortOrder=Desc&limit=25`
-
-  );
-
-  if(!response.ok) throw new Error("Respuesta "+response.status);
+  if(!response.ok) throw new Error("Error "+response.status);
 
   const data=await response.json();
 
-  status.textContent="Servidores recibidos: "+data.data.length;
+  if(!data.data || !Array.isArray(data.data)) throw new Error("La API todavía no está conectada.");
 
-  results.innerHTML="";
+  status.textContent="Servidores encontrados: "+data.data.length;
 
-  data.data.forEach((server,i)=>{
+  data.data.forEach(server=>{
 
    const card=document.createElement("div");
 
-   card.className="panel";
+   card.className="server";
 
    const title=document.createElement("b");
 
-   title.textContent="Servidor "+(i+1);
+   title.textContent="Servidor público";
 
    const info=document.createElement("p");
 
-   info.textContent=server.playing+" / "+server.maxPlayers+" jugadores";
+   info.textContent="Jugadores: "+server.playing+" / "+server.maxPlayers;
 
-   const link=document.createElement("a");
+   const join=document.createElement("button");
 
-   link.textContent="UNIRME A ROBLOX";
+   join.textContent="VER SERVIDOR";
 
-   link.href="roblox://experiences/start?placeId="+PLACE_ID+"&gameInstanceId="+server.id;
+   join.onclick=()=>window.location.href=
 
-   link.style.color="#ffd43b";
+    "https://www.roblox.com/games/107778070777162?gameInstanceId="+encodeURIComponent(server.id);
 
-   card.append(title,info,link);
+   card.append(title,info,join);
 
    results.appendChild(card);
 
@@ -136,9 +138,9 @@ async function loadServers(){
 
  }catch(error){
 
-  status.textContent="No se pudo cargar desde esta página";
+  status.textContent="No se pudo conectar todavía.";
 
-  results.textContent="Puede ser una restricción del navegador. No significa que tu cuenta tenga un problema.";
+  results.textContent=error.message;
 
  }
 
