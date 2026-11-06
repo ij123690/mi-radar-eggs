@@ -1,153 +1,107 @@
 <!DOCTYPE html>
-
 <html lang="es">
-
 <head>
-
 <meta charset="UTF-8">
-
 <meta name="viewport" content="width=device-width, initial-scale=1">
-
 <title>Mi Radar Eggs</title>
-
 <style>
-
 *{box-sizing:border-box}
-
-body{margin:0;padding:22px;background:#080d18;color:white;font-family:Arial,sans-serif}
-
+body{margin:0;padding:18px;background:#080d18;color:white;font-family:Arial}
 h1{text-align:center;color:#ffd84d;font-size:29px}
-
-.sub{text-align:center;color:#aab6cc;font-size:17px}
-
-.panel{background:#172238;border:1px solid #34445f;border-radius:18px;padding:20px;margin:18px 0}
-
-label{display:block;margin:12px 0}
-
-select,button{width:100%;padding:16px;border-radius:12px;font-size:17px}
-
-select{background:#293953;color:white;border:1px solid #ddd}
-
-button{background:#ffd84d;color:#111;border:0;font-weight:bold;margin-top:12px}
-
-.server{background:#24334d;padding:14px;border-radius:12px;margin:12px 0}
-
+.sub{text-align:center;color:#aab6cc}
+.panel{background:#172238;border:1px solid #34445b;border-radius:12px;padding:15px;margin:14px 0}
+button{width:100%;padding:14px;border:0;border-radius:9px;background:#ffd84d;color:#111;font-weight:bold;font-size:16px}
+.card{background:#202e45;border:1px solid #40516b;border-radius:10px;padding:13px;margin:12px 0}
 .small{color:#aab6cc;font-size:13px}
-
-.status{text-align:center;color:#8be0a5;padding:10px}
-
-a{color:#ffd84d}
-
+.status{color:#72e0a0;text-align:center}
 </style>
-
 </head>
-
 <body>
-
 <h1>🥚 MI RADAR EGGS</h1>
-
-<p class="sub">Tu buscador de servidores de Roblox</p>
-
-<div class="panel">
-
-<h2>🎯 Filtros</h2>
-
-<label>Rareza que buscas</label>
-
-<select id="rarity">
-
-<option value="all">Todos los huevos</option>
-
-<option value="Secret">Secret</option>
-
-<option value="Divine">Divine</option>
-
-<option value="Eternal">Eternal</option>
-
-</select>
-
-<button onclick="buscar()">BUSCAR SERVIDORES</button>
-
-<p class="small">La rareza se podrá filtrar cuando tengamos una fuente que informe qué huevo hay en cada servidor.</p>
-
-</div>
+<p class="sub">Radar de servidores de Roblox</p>
 
 <div class="panel">
-
-<div id="status" class="status">Listo para buscar</div>
-
-<div id="results"></div>
-
+<p>Servidores públicos disponibles</p>
+<button onclick="cargar()">BUSCAR SERVIDORES</button>
+<p id="estado" class="status">Listo para buscar</p>
 </div>
 
-<p class="small">Esta versión consulta servidores públicos. No solicita tu contraseña ni tus datos de Roblox.</p>
+<div id="resultados"></div>
+<button onclick="mas()" id="mas" style="display:none">CARGAR MÁS</button>
 
 <script>
+const juego = "107778070777162";
+let cursor = "";
+let ocupado = false;
 
-const API="https://mi-radar-eggs-api.ij5084120.workers.dev";
-
-async function buscar(){
-
- const status=document.getElementById("status");
-
- const results=document.getElementById("results");
-
- status.textContent="Buscando servidores públicos...";
-
- results.innerHTML="";
-
- try{
-
-  const response=await fetch(API+"/servers");
-
-  if(!response.ok) throw new Error("Error "+response.status);
-
-  const data=await response.json();
-
-  if(!data.data || !Array.isArray(data.data)) throw new Error("La API todavía no está conectada.");
-
-  status.textContent="Servidores encontrados: "+data.data.length;
-
-  data.data.forEach(server=>{
-
-   const card=document.createElement("div");
-
-   card.className="server";
-
-   const title=document.createElement("b");
-
-   title.textContent="Servidor público";
-
-   const info=document.createElement("p");
-
-   info.textContent="Jugadores: "+server.playing+" / "+server.maxPlayers;
-
-   const join=document.createElement("button");
-
-   join.textContent="VER SERVIDOR";
-
-   join.onclick=()=>window.location.href=
-
-    "https://www.roblox.com/games/107778070777162?gameInstanceId="+encodeURIComponent(server.id);
-
-   card.append(title,info,join);
-
-   results.appendChild(card);
-
-  });
-
- }catch(error){
-
-  status.textContent="No se pudo conectar todavía.";
-
-  results.textContent=error.message;
-
- }
-
+async function cargar(){
+  cursor = "";
+  document.getElementById("resultados").innerHTML = "";
+  await buscar();
 }
 
+async function mas(){
+  await buscar();
+}
+
+async function buscar(){
+  if(ocupado) return;
+  ocupado = true;
+  const estado = document.getElementById("estado");
+  estado.textContent = "Buscando servidores...";
+  document.getElementById("mas").style.display = "none";
+
+  try{
+    let url = "https://games.roblox.com/v1/games/" + juego +
+      "/servers/Public?sortOrder=Desc&limit=100";
+    if(cursor) url += "&cursor=" + encodeURIComponent(cursor);
+
+    const respuesta = await fetch(url);
+    if(!respuesta.ok) throw new Error("Roblox respondió: " + respuesta.status);
+
+    const datos = await respuesta.json();
+    const lista = datos.data || [];
+    const contenedor = document.getElementById("resultados");
+
+    if(lista.length === 0 && !cursor){
+      estado.textContent = "No se encontraron servidores.";
+    }
+
+    lista.forEach(server=>{
+      const tarjeta = document.createElement("div");
+      tarjeta.className = "card";
+
+      const titulo = document.createElement("b");
+      titulo.textContent = "Servidor público";
+
+      const info = document.createElement("p");
+      info.className = "small";
+      info.textContent = "Jugadores: " + server.playing +
+        " / " + server.maxPlayers;
+
+      const boton = document.createElement("button");
+      boton.textContent = "VER SERVIDOR";
+      boton.onclick = ()=>{
+        const enlace = "roblox://experiences/start?placeId=" +
+          juego + "&gameInstanceId=" + server.id;
+        window.location.href = enlace;
+      };
+
+      tarjeta.append(titulo,info,boton);
+      contenedor.appendChild(tarjeta);
+    });
+
+    cursor = datos.nextPageCursor || "";
+    document.getElementById("mas").style.display =
+      cursor ? "block" : "none";
+
+    estado.textContent = "Servidores encontrados: " + lista.length;
+  }catch(error){
+    estado.textContent = "Error al consultar Roblox: " + error.message;
+  }finally{
+    ocupado = false;
+  }
+}
 </script>
-
 </body>
-
 </html>
